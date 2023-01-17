@@ -1,7 +1,9 @@
 # QQZone_AutoDownload_Album
 Python+selenium 自动下载QQ空间相册
 
-![image](https://user-images.githubusercontent.com/31002981/212890235-ebc75c56-a3a1-4066-8192-31809f3bd45a.png)
+<div style="text-align: center;">
+    <img alt="" src="https://user-images.githubusercontent.com/31002981/212890235-ebc75c56-a3a1-4066-8192-31809f3bd45a.png" style="margin: 0 auto;" />
+</div>
 
 
 貌似腾讯的登陆加密做的很复杂。所以用selenium模拟登陆的，这样就可以绕过复杂的登陆验证了，等登陆进去后，就可以随便浪啦，解析网页啥的跟普通差不多。   
