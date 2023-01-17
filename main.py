@@ -331,24 +331,33 @@ class QQZonePictures:
             pic_name, url = item
             path = os.path.join(root, pic_name)
             queue_print('>> [{}]当前下载：{} - {}'.format(id, path, url))
-            read = requests.get(url)
-            with open(path, 'wb+') as file:
-                file.write(read.content)
-            queue_print(f">> [{id}] {pic_name} 下载成功")
+            cnt_retry = 0
+            max_retry = 5
+            while cnt_retry < max_retry:
+                try:
+                    read = requests.get(url, timeout=5)
+                    with open(path, 'wb+') as file:
+                        file.write(read.content)
+                    queue_print(f">> [{id}] {pic_name} 下载成功")
+                    break
+                except:
+                    cnt_retry += 1
+                    queue_print('>> [{}] 下载超时，即将重试{}/{}'.format(id, cnt_retry, max_retry))
             time.sleep(0.1)
 
-        with ThreadPoolExecutor(self.threads_num) as executor:  # 创建 ThreadPoolExecutor
-            future_list = [executor.submit(thread_find, id) for id in range(self.threads_num)]
-        results = []
-        for future in as_completed(future_list):
-            results.append(future.result())  # 获取任务结果
+        # with ThreadPoolExecutor(self.threads_num) as executor:  # 创建 ThreadPoolExecutor
+        #     future_list = [executor.submit(thread_find, id) for id in range(self.threads_num)]
+        # results = []
+        # for future in as_completed(future_list):
+        #     results.append(future.result())  # 获取任务结果
         
-        # pool = []
-        # for id in range(self.threads_num):
-        #   pool.append(threading.Thread(target=thread_find, args=(id, )))
-        # for t in pool:
-        #   t.start()
-        #   t.join()
+        pool = []
+        for id in range(self.threads_num):
+          pool.append(threading.Thread(target=thread_find, args=(id, ), daemon=True))
+        for t in pool:
+          t.start()
+        for t in pool:
+          t.join()
 
         queue_print(f">> 相册{file_name}下载完成...")
         
