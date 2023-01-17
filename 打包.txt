@@ -1,0 +1,2 @@
+conda activate py39
+pyinstaller -F -w -i icon.ico main.py

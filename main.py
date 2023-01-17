@@ -21,7 +21,6 @@ import json
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import queue
-from tqdm import tqdm
 import pyautogui
 
 
@@ -294,7 +293,7 @@ class QQZonePictures:
         root = self.Mkdir_path(os.path.join(self.root, file_name))
         contents = []
         temp_pic_names = []
-        for photo in tqdm(data["data"]["photoList"], desc='照片链接处理中...'):
+        for photo in data["data"]["photoList"]:
             name = photo['name'].split('/')[-1].split('.')[-1]
             url = photo['raw'] if photo['raw'] else photo['url']
             is_video = photo['is_video'] == "true"
@@ -309,7 +308,8 @@ class QQZonePictures:
             temp_pic_names.append(pic_name)
 
             contents.append((pic_name, url))
-        with open('url.txt', 'w+') as f:
+
+        with open('./url.txt', 'w+') as f:
           for pic_name, url in contents:
               f.write(pic_name + " " + url + '\n')
         queue_print(">> 图片信息写入url.txt完成")
@@ -388,7 +388,7 @@ class QQZonePictures:
                 break
             current_num += 500
             start = current_num
-            queue_print('>> 本次获取到{}项，已获取到{}项，共{}项'.format(len(Photos_data["data"]["photoList"]), current_num, num))
+            queue_print('>> 本次获取到{}项，共{}项'.format(len(Photos_data["data"]["photoList"]), num))
             if not Photos_datas:
                 Photos_datas = Photos_data
             elif Photos_data["data"]["photoList"]:
@@ -424,7 +424,7 @@ class MyWin(Win):
         password = self.tk_input_password.get().strip()
         save_path = self.tk_input_save_path.get().strip()
         other_username = self.tk_input_other_username.get().strip()
-        other_username = other_username if other_username else username
+        other_username = other_username if other_username!= '' else username
         threads_num = self.tk_input_threads_num.get().strip()
         threads_num = int(threads_num) if threads_num else 4
         queue_print('*'*60+'\r\n\t\t    即将开始!')
