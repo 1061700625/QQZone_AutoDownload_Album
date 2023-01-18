@@ -20,6 +20,19 @@ Python+selenium 自动下载QQ空间相册
 1、main.py+gui.py是界面版的。    
 2、之前的console版放到了`old_file`里，可以运行`old_file/QQ空间相册下载-新.py`。    
 
+# 运行说明：
+**exe运行方式：**
+1. 解压Chrome.zip；
+2. 双击`main.exe`；
+
+**GUI源码运行方式：**
+1. 首次运行先安装依赖：`pip install -r requirements.txt`；
+2. 运行py：`python main.py`。
+
+**Console源码运行方式：**
+1. 首次运行先安装依赖：`pip install -r requirements.txt`；
+2. 将`old_file/QQ空间相册下载-新.py`复制出来，即放到与`main.py`同目录；
+3. 运行py：`QQ空间相册下载-新.py`。
 
 # 其他说明
 1、如果是下载自己QQ号的相册，加密的相册就也可以下。因为自己进自己的相册不用密码的。        
