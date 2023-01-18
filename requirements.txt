@@ -1,0 +1,4 @@
+selenium
+undetected_chromedriver
+requests
+pyautogui
