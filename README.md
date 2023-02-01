@@ -39,7 +39,7 @@ Python+selenium 自动下载QQ空间相册
 1. 首次运行先安装依赖：`pip install -r requirements.txt`；
 2. 运行py：`python main.py`。
 
-**Console源码运行方式：**
+**Console源码运行方式(不再维护)：**
 1. 首次运行先安装依赖：`pip install -r requirements.txt`；
 2. 将`old_file/QQ空间相册下载-新.py`复制出来，即放到与`main.py`同目录；
 3. 运行py：`QQ空间相册下载-新.py`。
