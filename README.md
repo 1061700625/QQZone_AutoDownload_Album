@@ -29,7 +29,7 @@ Python+selenium 自动下载QQ空间相册
 # 运行说明：
 先下载文件：
 - [releases](https://github.com/1061700625/QQZone_AutoDownload_Album/releases)
-- 或者直接在上发`Code -> Download ZIP`下载
+- 或者直接在上发`Code -> Download ZIP`下载 （**推荐**）
 
 **exe运行方式：**
 1. 解压Chrome.zip；
