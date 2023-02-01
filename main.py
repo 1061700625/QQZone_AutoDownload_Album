@@ -22,9 +22,10 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import queue
 import pyautogui
-
+from bs4 import BeautifulSoup
 
 global_queue = Queue()
+
 
 def queue_print(string):
     global global_queue
@@ -41,6 +42,7 @@ class SimpleQueueFetch:
     fetch.put('h')
     fetch.show()
     """
+
     def __init__(self, arr):
         self.q = queue.Queue()
         for item in arr:
@@ -76,6 +78,7 @@ class SimpleQueueFetch:
         self.put(val)
         return val
 
+
 class QQZone:
     def __init__(self, username=None, password=None, other_username=None):
         self.url_login = 'https://i.qq.com/'
@@ -98,45 +101,88 @@ class QQZone:
         self.browser_path = r'Chrome/BitBrowser.exe'
         self.driver_path = r'Chrome/chromedriver.exe'
 
+    def get_browser_options(self):
+        options = Options()
+        # self.options.add_argument("--blink-settings=imagesEnabled=false")
+        options.add_argument("--allow-running-insecure-content")
+        options.add_argument("--no-default-browser-check")
+        options.add_argument("--disable-full-form-autofill-ios")
+        options.add_argument("--disable-autofill-keyboard-accessory-view[8]")
+        options.add_argument("--disable-single-click-autofill")
+        options.add_argument("--ignore-certificate-errors")
+        options.add_argument("--disable-infobars")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--disable-blink-features")
+        options.add_argument("--incognito")
+        options.add_argument("--mute-audio")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-software-rasterizer")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-webgl")
+        options.add_argument("--disable-javascript")
+        options.add_argument("--lang=en_US")
+        options.add_argument("--disable-client-side-phishing-detection")
+        options.add_argument("--no-first-run")
+        options.add_argument("--use-fake-device-for-media-stream")
+        options.add_argument("--autoplay-policy=user-gesture-required")
+        options.add_argument("--disable-features=ScriptStreaming")
+        options.add_argument("--disable-notifications")
+        options.add_argument("--disable-popup-blocking")
+        options.add_argument("--disable-save-password-bubble")
+        options.add_argument("--disable-background-networking")
+        options.add_argument("--disable-domain-reliability")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.page_load_strategy = 'eager'
+        return options
+
     def driver(self):
+        chrome_options = self.get_browser_options()
         # 有头浏览器的写法
         driver = uc.Chrome(driver_executable_path=self.driver_path,
-                            browser_executable_path=self.browser_path,
-                            suppress_welcome=False)
+                           browser_executable_path=self.browser_path,
+                           suppress_welcome=False,
+                           options=chrome_options)
         driver.get(self.url_login)
-        
+
         if self.username and self.password:
-          queue_print('>> 提供了账号或密码，进入自动登录模式(不大建议)')
-          queue_print('>> 切换到登录表单')
-          driver.switch_to.frame('login_frame')
-          # 切换到账号密码登录
-          log_method = driver.find_element(by=By.ID, value='switcher_plogin')
-          log_method.click()
-          # 输入账号密码，登录
-          queue_print('>> 输入账号中...')
-          username = driver.find_element(by=By.ID, value='u')
-          username.clear()
-          username.send_keys(self.username)
-          queue_print('>> 输入密码中...')
-          password = driver.find_element(by=By.ID, value='p')
-          password.clear()
-          password.send_keys(self.password)
-          login_button = driver.find_element(by=By.ID, value='login_button')
-          login_button.click()
-          queue_print('**此处若有滑块验证，请在10s内手动完成！！！**')
-          queue_print('**若未成功登录，请手动完成登录！！！**')
-          time.sleep(10)
+            queue_print('>> 提供了账号或密码，进入自动登录模式(不大建议)')
+            queue_print('>> 切换到登录表单')
+            driver.switch_to.frame('login_frame')
+            # 切换到账号密码登录
+            log_method = driver.find_element(by=By.ID, value='switcher_plogin')
+            log_method.click()
+            # 输入账号密码，登录
+            queue_print('>> 输入账号中...')
+            username = driver.find_element(by=By.ID, value='u')
+            username.clear()
+            username.send_keys(self.username)
+            queue_print('>> 输入密码中...')
+            password = driver.find_element(by=By.ID, value='p')
+            password.clear()
+            password.send_keys(self.password)
+            login_button = driver.find_element(by=By.ID, value='login_button')
+            login_button.click()
+            queue_print('**此处若有滑块验证，请在10s内手动完成！！！**')
+            queue_print('**若未成功登录，请手动完成登录！！！**')
+            time.sleep(10)
         else:
-          queue_print('>> 未提供账号或密码，进入手动登录模式')
+            queue_print('>> 未提供账号或密码，进入手动登录模式')
         while True:
-          try:
-            WebDriverWait(driver, 2, 0.5).until(EC.presence_of_element_located((By.ID, r'aIcenter')))
-            queue_print('>> 登陆成功!')
-            break
-          except:
-            SimpleMessagebox.create(title='自动登陆失败', message='请手动完成登录!', msg_type='warning')
-            queue_print('>> 等待手动完成登录中, 可能较久，稍等一会儿...')
-            time.sleep(5)
+            try:
+                # WebDriverWait(driver, 2, 0.5).until(
+                # EC.presence_of_element_located((By.ID, r'aIcenter')))
+                _ = BeautifulSoup(driver.page_source, 'lxml').find_all(
+                    'a', id='aIcenter')[0]
+                print('>> 登陆成功!')
+                break
+            except:
+                # SimpleMessagebox.create(
+                    # title='自动登陆失败', message='请手动完成登录!', msg_type='warning')
+                pyautogui.alert(title='自动登陆失败', text='请手动完成登录后，点击确认!', button='确认')
+                queue_print('>> 等待手动完成登录中, 可能较久，稍等一会儿...')
+                time.sleep(5)
         driver.switch_to.default_content()
 
         # if self.other_username:
@@ -152,7 +198,8 @@ class QQZone:
         headers = copy.deepcopy(self.headers)
         headers['host'] = 'h5.qzone.qq.com'
         # 将字典转为cookiejar, 这样就可以将cookie赋给session
-        c = requests.utils.cookiejar_from_dict(self.cookies, cookiejar=None, overwrite=True)
+        c = requests.utils.cookiejar_from_dict(
+            self.cookies, cookiejar=None, overwrite=True)
         my_session.headers = headers
         # 将cookie赋给session
         my_session.cookies.update(c)
@@ -166,7 +213,6 @@ class QQZone:
         self.g_tk = hashes & 0x7fffffff
         return self.g_tk
 
-
     def login(self):
         queue_print('>> 开始登陆')
         driver = self.driver()
@@ -175,9 +221,6 @@ class QQZone:
         queue_print('>> 登录完成')
         driver.close()
         return self.cookies, self.g_tk, self.username
-
-
-
 
 
 class QQZonePictures:
@@ -266,7 +309,6 @@ class QQZonePictures:
         Photos_data = self.Clean_data(res.text)
         return Photos_data
 
-
     def Downloads_bk(self, data):
         file_name = data["data"]["topic"]['name']
         root = self.Mkdir_path(self.root + file_name + '//')
@@ -277,9 +319,9 @@ class QQZonePictures:
             path = root + pic_name
             exist_index = 1
             while os.path.exists(path):
-              pic_name = f"{name}_{exist_index}.jpg"
-              path = root + pic_name
-              exist_index += 1
+                pic_name = f"{name}_{exist_index}.jpg"
+                path = root + pic_name
+                exist_index += 1
             url = photo['raw'] if photo['raw'] else photo['url']
             queue_print(f">> 当前URL: {url}")
             read = requests.get(url)
@@ -287,7 +329,7 @@ class QQZonePictures:
                 file.write(read.content)
             queue_print(f">> {pic_name} 下载成功")
         queue_print(f">> 相册{file_name}下载完成...")
-  
+
     def Downloads(self, data):
         file_name = data["data"]["topic"]['name']
         root = self.Mkdir_path(os.path.join(self.root, file_name))
@@ -302,72 +344,74 @@ class QQZonePictures:
 
             exist_index = 1
             while temp_pic_names.count(pic_name):
-              pic_name = f"{name}_{exist_index}" + suffix
-              # print(f">> 文件名称已存在, 尝试新名称: {pic_name}")
-              exist_index += 1
+                pic_name = f"{name}_{exist_index}" + suffix
+                # print(f">> 文件名称已存在, 尝试新名称: {pic_name}")
+                exist_index += 1
             temp_pic_names.append(pic_name)
 
             contents.append((pic_name, url))
 
         with open('./url.txt', 'w+') as f:
-          for pic_name, url in contents:
-              f.write(pic_name + " " + url + '\n')
+            for pic_name, url in contents:
+                f.write(pic_name + " " + url + '\n')
         queue_print(">> 图片信息写入url.txt完成")
-        
+
         queue_print(">> 正式开始下载...")
+
         def thread_find(id):
-          total_length = len(contents)
-          gap = math.ceil(total_length / self.threads_num)
-          start = gap * id
-          end = gap * (id + 1)
-          end = end if end <= total_length else total_length
-          queue_print('>> [{}]当前线程分配区域: [{}~{})'.format(id, start, end))
-          datas = SimpleQueueFetch(contents[start:end].copy())
-          while True:
-            item = datas.get()
-            if not item:
-                queue_print('>> [{}]没有更多内容，当前线程完成'.format(id))
-                break
-            pic_name, url = item
-            path = os.path.join(root, pic_name)
-            queue_print('>> [{}]当前下载：{} - {}'.format(id, path, url))
-            cnt_retry = 0
-            max_retry = 5
-            while cnt_retry < max_retry:
-                try:
-                    read = requests.get(url, timeout=5)
-                    with open(path, 'wb+') as file:
-                        file.write(read.content)
-                    queue_print(f">> [{id}] {pic_name} 下载成功")
+            total_length = len(contents)
+            gap = math.ceil(total_length / self.threads_num)
+            start = gap * id
+            end = gap * (id + 1)
+            end = end if end <= total_length else total_length
+            queue_print('>> [{}]当前线程分配区域: [{}~{})'.format(id, start, end))
+            datas = SimpleQueueFetch(contents[start:end].copy())
+            while True:
+                item = datas.get()
+                if not item:
+                    queue_print('>> [{}]没有更多内容，当前线程完成'.format(id))
                     break
-                except:
-                    cnt_retry += 1
-                    queue_print('>> [{}] 下载超时，即将重试{}/{}'.format(id, cnt_retry, max_retry))
-            time.sleep(0.1)
+                pic_name, url = item
+                path = os.path.join(root, pic_name)
+                queue_print('>> [{}]当前下载：{} - {}'.format(id, path, url))
+                cnt_retry = 0
+                max_retry = 5
+                while cnt_retry < max_retry:
+                    try:
+                        read = requests.get(url, timeout=5)
+                        with open(path, 'wb+') as file:
+                            file.write(read.content)
+                        queue_print(f">> [{id}] {pic_name} 下载成功")
+                        break
+                    except:
+                        cnt_retry += 1
+                        queue_print(
+                            '>> [{}] 下载超时，即将重试{}/{}'.format(id, cnt_retry, max_retry))
+                time.sleep(0.1)
 
         # with ThreadPoolExecutor(self.threads_num) as executor:  # 创建 ThreadPoolExecutor
         #     future_list = [executor.submit(thread_find, id) for id in range(self.threads_num)]
         # results = []
         # for future in as_completed(future_list):
         #     results.append(future.result())  # 获取任务结果
-        
+
         pool = []
         for id in range(self.threads_num):
-          pool.append(threading.Thread(target=thread_find, args=(id, ), daemon=True))
+            pool.append(threading.Thread(
+                target=thread_find, args=(id, ), daemon=True))
         for t in pool:
-          t.start()
+            t.start()
         for t in pool:
-          t.join()
+            t.join()
 
         queue_print(f">> 相册{file_name}下载完成...")
-        
 
     def main(self):
         photos_lists = self.Get_photo_lists()
         queue_print(photos_lists)
         if photos_lists['code'] != 0:
-          queue_print('>> 相册获取失败')
-          return
+            queue_print('>> 相册获取失败')
+            return
         index = 1
         queue_print(">> 你共有以下相册，请输入需要下载相册的序号 \r\n")
         temp_msg = '>> 你共有以下相册，请输入需要下载相册的序号 \r\n'
@@ -375,15 +419,16 @@ class QQZonePictures:
             name = photos_list['name']
             num = photos_list['total']
             allowAccess = '加密' if photos_list['allowAccess'] == 0 else '开放'
-            msg = "[{}] ({}) {} - {}".format(index, allowAccess, name , num)
+            msg = "[{}] ({}) {} - {}".format(index, allowAccess, name, num)
             queue_print(msg)
-            temp_msg += msg +'\n'
+            temp_msg += msg + '\n'
             index += 1
-        
+
         # which_album = int(input("输入数字(如:1) ").strip()) - 1
         temp_msg += '\n输入对应数字(如:1)'
-        which_album = int(pyautogui.prompt(text=temp_msg,title='选择待下载相册',default='1').strip()) - 1
-        
+        which_album = int(pyautogui.prompt(
+            text=temp_msg, title='选择待下载相册', default='1').strip()) - 1
+
         list_id = photos_lists["data"]["albumListModeSort"][which_album]['id']
         num = photos_lists["data"]["albumListModeSort"][which_album]['total']
         queue_print('>> 获取照片中...')
@@ -397,25 +442,27 @@ class QQZonePictures:
                 break
             current_num += 500
             start = current_num
-            queue_print('>> 本次获取到{}项，共{}项'.format(len(Photos_data["data"]["photoList"]), num))
+            queue_print('>> 本次获取到{}项，共{}项'.format(
+                len(Photos_data["data"]["photoList"]), num))
             if not Photos_datas:
                 Photos_datas = Photos_data
             elif Photos_data["data"]["photoList"]:
-                Photos_datas["data"]["photoList"].extend(Photos_data["data"]["photoList"])
+                Photos_datas["data"]["photoList"].extend(
+                    Photos_data["data"]["photoList"])
         queue_print('>> 下载照片中...')
         self.Downloads(Photos_datas)
- 
+
 
 class MyWin(Win):
     def __init__(self):
         super().__init__()
         self.button_start_enable_flag = False
 
-
     def start(self, evt):
         self.update_debug('')
         if self.tk_input_username.get().strip() == '':
-            pyautogui.alert(title='缺少必填项', text='你的QQ号是必须要填的，其他可选', button='明白')
+            pyautogui.alert(
+                title='缺少必填项', text='你的QQ号是必须要填的，其他可选', button='明白')
             return
 
         def simple_daemon_thread():
@@ -428,12 +475,11 @@ class MyWin(Win):
 
         threading.Thread(target=simple_daemon_thread, daemon=True).start()
 
-
         username = self.tk_input_username.get().strip()
         password = self.tk_input_password.get().strip()
         save_path = self.tk_input_save_path.get().strip()
         other_username = self.tk_input_other_username.get().strip()
-        other_username = other_username if other_username!= '' else username
+        other_username = other_username if other_username != '' else username
         threads_num = self.tk_input_threads_num.get().strip()
         threads_num = int(threads_num) if threads_num else 4
         queue_print('*'*60+'\r\n\t\t    即将开始!')
@@ -442,7 +488,8 @@ class MyWin(Win):
 
         def start_album_download():
             queue_print('>> 1.先模拟登陆获取cookie')
-            Login = QQZone(username=username, password=password, other_username=other_username)
+            Login = QQZone(username=username, password=password,
+                           other_username=other_username)
             try:
                 cookies, gtk, uin = Login.login()
             except Exception as e:
@@ -459,13 +506,13 @@ class MyWin(Win):
 
             queue_print('>> 2.再开始下载相册')
             spider = QQZonePictures(
-                        cookies=final_ck, 
-                        gtk=gtk, 
-                        uin=uin, 
-                        host_uin=other_username, 
-                        save_path=save_path,
-                        threads_num=threads_num
-                    )
+                cookies=final_ck,
+                gtk=gtk,
+                uin=uin,
+                host_uin=other_username,
+                save_path=save_path,
+                threads_num=threads_num
+            )
             try:
                 spider.main()
             except Exception as e:
@@ -477,17 +524,6 @@ class MyWin(Win):
         threading.Thread(target=start_album_download, daemon=True).start()
 
 
-
-if __name__ == "__main__":  
+if __name__ == "__main__":
     win = MyWin()
     win.mainloop()
-
-
-
-
-
-
-
-
-
-
