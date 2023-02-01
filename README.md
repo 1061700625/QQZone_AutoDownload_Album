@@ -1,6 +1,12 @@
 # QQZone_AutoDownload_Album
 Python+selenium 自动下载QQ空间相册
 
+---
+
+> 上传QQ空间相册可以看这个：https://github.com/1061700625/QQZone_AutoDownload_Album
+
+---
+
 <div style="text-align: center;">
     <img alt="" src="https://user-images.githubusercontent.com/31002981/212890235-ebc75c56-a3a1-4066-8192-31809f3bd45a.png" style="margin: 0 auto;" />
 </div>
