@@ -17,7 +17,7 @@ import copy
 from selenium.webdriver.common.by import By
 import requests
 import time
-import json
+import json, json5
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import queue
@@ -185,10 +185,10 @@ class QQZone:
                 time.sleep(5)
         driver.switch_to.default_content()
 
-        # if self.other_username:
-        #   print('>> 进入好友空间...')
-        #   driver.get(r'https://user.qzone.qq.com/' + self.other_username)
-        #   time.sleep(2)
+        if self.other_username:
+          print('>> 进入好友空间...')
+          driver.get(r'https://user.qzone.qq.com/' + self.other_username)
+          time.sleep(2)
         self.cookies = driver.get_cookies()
         return driver
 
@@ -219,7 +219,11 @@ class QQZone:
         queue_print('>> 获取g_tk')
         self.get_g_tk(driver)
         queue_print('>> 登录完成')
-        driver.close()
+        try:
+            driver.close()
+            driver.quit()
+        except:
+            pass
         return self.cookies, self.g_tk, self.username
 
 
@@ -237,7 +241,7 @@ class QQZonePictures:
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;'
                       'q=0.8,application/signed-exchange;v=b3;q=0.9',
             'accept-encoding': 'gzip, deflate, br',
-            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
             'cache-control': 'no-cache',
             'cookie': self.cookies,
             'pragma': 'no-cache',
@@ -264,11 +268,11 @@ class QQZonePictures:
             os.mkdir(path)
         return path
 
-    def Get_photo_lists(self):
+    def Get_photo_lists(self, gtk=None, hostUin=None, uin=None):
         param = {
-            'g_tk': self.gtk,
-            'hostUin': self.hostUin if self.hostUin else self.uin,
-            'uin': self.uin,
+            'g_tk': gtk or self.gtk,
+            'hostUin': hostUin or (self.hostUin if self.hostUin else self.uin),
+            'uin': uin or self.uin,
             'inCharset': 'utf-8',
             'outCharset': 'utf-8',
             'pageNumModeSort': '40',
@@ -404,7 +408,7 @@ class QQZonePictures:
         for t in pool:
             t.join()
 
-        queue_print(f">> 相册{file_name}下载完成...")
+        queue_print(f">> 相册 {file_name} 下载完成...")
 
     def main(self):
         photos_lists = self.Get_photo_lists()
@@ -452,29 +456,48 @@ class QQZonePictures:
         queue_print('>> 下载照片中...')
         self.Downloads(Photos_datas)
 
-
+from tkinter import END
 class MyWin(Win):
     def __init__(self):
         super().__init__()
-        self.button_start_enable_flag = False
-
-    def start(self, evt):
+        self.button_start_enable_flag = True
+        self.download_album_start_evt = False
+        
+        if os.path.exists('config.json'):
+            with open('config.json', 'r+', encoding='utf8') as f:
+                config_f = json5.loads(f.read())
+            self.tk_input_username.delete('0', END)
+            self.tk_input_password.delete('0', END)
+            self.tk_input_other_username.delete('0', END)
+            self.tk_input_save_path.delete('0', END)
+            self.tk_input_threads_num.delete('0', END)
+            self.tk_input_username.insert('0', config_f['username'])
+            self.tk_input_password.insert('0', config_f['password'])
+            self.tk_input_other_username.insert('0', config_f['other_username'])
+            self.tk_input_save_path.insert('0', config_f['save_path'])
+            self.tk_input_threads_num.insert('0', config_f['threads_num'])
+        
+        threading.Thread(target=self.simple_daemon_thread, daemon=True).start()
+        threading.Thread(target=self.mainloop_thread, daemon=True).start()
+    
+    def simple_daemon_thread(self):
+        while True:
+            if not global_queue.empty():
+                m = global_queue.get()
+                self.append_debug(m)
+            self.enable_button_start() if self.button_start_enable_flag else self.disable_button_start()
+            time.sleep(0.01)
+    
+    
+    def start_process(self):
         self.update_debug('')
         if self.tk_input_username.get().strip() == '':
             pyautogui.alert(
                 title='缺少必填项', text='你的QQ号是必须要填的，其他可选', button='明白')
             return
 
-        def simple_daemon_thread():
-            while True:
-                if not global_queue.empty():
-                    m = global_queue.get()
-                    self.append_debug(m)
-                self.enable_button_start() if self.button_start_enable_flag else self.disable_button_start()
-                time.sleep(0.1)
-
-        threading.Thread(target=simple_daemon_thread, daemon=True).start()
-
+        self.button_start_enable_flag = False
+        
         username = self.tk_input_username.get().strip()
         password = self.tk_input_password.get().strip()
         save_path = self.tk_input_save_path.get().strip()
@@ -482,28 +505,60 @@ class MyWin(Win):
         other_username = other_username if other_username != '' else username
         threads_num = self.tk_input_threads_num.get().strip()
         threads_num = int(threads_num) if threads_num else 4
+        
+        contents = ''
+        if os.path.exists('config.json'):
+            with open('config.json', 'r+', encoding='utf8') as f:
+                contents = f.read()
+        config_f = json5.loads(contents) if contents else {}  
+        with open('config.json', 'w+', encoding='utf8') as f:
+            config_f["username"] = username
+            config_f["password"] = password
+            config_f["other_username"] = other_username
+            config_f["threads_num"] = threads_num
+            config_f["save_path"] = save_path
+            f.write(json.dumps(config_f))
+        
         queue_print('*'*60+'\r\n\t\t    即将开始!')
         queue_print('*'*60)
         time.sleep(2)
 
         def start_album_download():
-            queue_print('>> 1.先模拟登陆获取cookie')
-            Login = QQZone(username=username, password=password,
-                           other_username=other_username)
-            try:
-                cookies, gtk, uin = Login.login()
-            except Exception as e:
-                queue_print('\n\n遇到错误了：\n' + str(e))
-                pyautogui.alert(title='遇到错误了', text=str(e), button='了解')
-                self.button_start_enable_flag = True
-                return
-            final_ck = ''
-            for ck in cookies:
-                final_ck += '{}={};'.format(ck['name'], ck['value'])
+            with open('config.json', 'r+', encoding='utf8') as f:
+                config_f = json.loads(f.read())
+                final_ck = config_f.get('final_ck')
+                gtk = config_f.get('gtk')
+                uin = config_f.get('uin')
+            
+            if final_ck and gtk and uin:
+                print('Cookie已存在, 检查有效性')
+                print()
+            if self.check_cookie(final_ck, uin, gtk):
+                print('Cookie有效')
+            else:
+                queue_print('>> 1.先模拟登陆获取cookie')
+                Login = QQZone(username=username, password=password,
+                            other_username=other_username)
+                try:
+                    cookies, gtk, uin = Login.login()
+                except Exception as e:
+                    queue_print('\n\n遇到错误了：\n' + str(e))
+                    pyautogui.alert(title='遇到错误了', text=str(e), button='了解')
+                    self.button_start_enable_flag = True
+                    return
+                final_ck = ''
+                for ck in cookies:
+                    final_ck += '{}={};'.format(ck['name'], ck['value'])
             queue_print(f'>> gtk: {gtk}')
             queue_print(f'>> uin: {uin}')
             queue_print(f'>> final_ck: {final_ck}')
 
+            with open('config.json', 'w+', encoding='utf8') as f:
+                config_f['gtk'] = gtk
+                config_f['uin'] = uin
+                config_f['final_ck'] = final_ck
+                f.write(json.dumps(config_f))
+            
             queue_print('>> 2.再开始下载相册')
             spider = QQZonePictures(
                 cookies=final_ck,
@@ -515,13 +570,29 @@ class MyWin(Win):
             )
             try:
                 spider.main()
+                pyautogui.alert(title='温馨提示', text='本次下载完成了~\n重新点击>>启动<<可以再次下载', button='明白')
             except Exception as e:
                 queue_print('\n\n遇到错误了：\n' + str(e))
                 pyautogui.alert(title='遇到错误了', text=str(e), button='了解')
-                self.button_start_enable_flag = True
                 return
+            self.button_start_enable_flag = True
+        start_album_download()
+    
+      
+    def mainloop_thread(self):
+        while True:
+            if self.download_album_start_evt:
+                self.start_process()
+                self.download_album_start_evt = False
+            time.sleep(1)
+                
+    def check_cookie(self, cookies, uin, gtk):
+        res = QQZonePictures(cookies=cookies, uin=uin, gtk=gtk).Get_photo_lists()
+        queue_print(res)
+        return res['code'] != -3000
 
-        threading.Thread(target=start_album_download, daemon=True).start()
+    def start(self, evt):
+        self.download_album_start_evt = True
 
 
 if __name__ == "__main__":
