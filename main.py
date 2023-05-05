@@ -419,7 +419,11 @@ class QQZonePictures:
         index = 1
         queue_print(">> 你共有以下相册，请输入需要下载相册的序号 \r\n")
         temp_msg = '>> 你共有以下相册，请输入需要下载相册的序号 \r\n'
-        for photos_list in photos_lists["data"]["albumListModeSort"]:
+        try:
+            photos_lists = photos_lists["data"]['albumListModeSort']
+        except:
+            photos_lists = photos_lists["data"]['albumListModeClass'][0]['albumList']
+        for photos_list in photos_lists:
             name = photos_list['name']
             num = photos_list['total']
             allowAccess = '加密' if photos_list['allowAccess'] == 0 else '开放'
@@ -433,8 +437,8 @@ class QQZonePictures:
         which_album = int(pyautogui.prompt(
             text=temp_msg, title='选择待下载相册', default='1').strip()) - 1
 
-        list_id = photos_lists["data"]["albumListModeSort"][which_album]['id']
-        num = photos_lists["data"]["albumListModeSort"][which_album]['total']
+        list_id = photos_lists[which_album]['id']
+        num = photos_lists[which_album]['total']
         queue_print('>> 获取照片中...')
         start = 0
         Photos_datas = None
