@@ -1,2 +1,6 @@
-conda activate py39
+conda create -n qqzone python=3.9
+conda activate qqzone
+pip install -r requirements.txt
+
+conda activate qqzone
 pyinstaller -F -w -i icon.ico main.py

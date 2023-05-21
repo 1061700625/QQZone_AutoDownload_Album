@@ -434,9 +434,12 @@ class QQZonePictures:
 
         # which_album = int(input("输入数字(如:1) ").strip()) - 1
         temp_msg += '\n输入对应数字(如:1)'
-        which_album = int(pyautogui.prompt(
-            text=temp_msg, title='选择待下载相册', default='1').strip()) - 1
-
+        try:
+            which_album = int(pyautogui.prompt(
+                text=temp_msg, title='选择待下载相册', default='1').strip()) - 1
+        except Exception as e:
+            pyautogui.alert(title='温馨提示', text='请检查输入', button='明白')
+            return
         list_id = photos_lists[which_album]['id']
         num = photos_lists[which_album]['total']
         queue_print('>> 获取照片中...')
@@ -578,7 +581,6 @@ class MyWin(Win):
             except Exception as e:
                 queue_print('\n\n遇到错误了：\n' + str(e))
                 pyautogui.alert(title='遇到错误了', text=str(e), button='了解')
-                return
             self.button_start_enable_flag = True
         start_album_download()
     

@@ -2,3 +2,7 @@ selenium
 undetected_chromedriver
 requests
 pyautogui
+pyinstaller
+json5
+bs4
+requests
