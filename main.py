@@ -23,6 +23,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import queue
 import pyautogui
 from bs4 import BeautifulSoup
+import lxml
 
 global_queue = Queue()
 

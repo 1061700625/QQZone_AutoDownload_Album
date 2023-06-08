@@ -5,4 +5,5 @@ pyautogui
 pyinstaller
 json5
 bs4
+lxml
 requests
