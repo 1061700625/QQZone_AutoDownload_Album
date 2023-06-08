@@ -134,7 +134,7 @@ class QQZone:
         options.add_argument("--disable-background-networking")
         options.add_argument("--disable-domain-reliability")
         options.add_argument("--disable-blink-features=AutomationControlled")
-        options.page_load_strategy = 'eager'
+        # options.page_load_strategy = 'eager'
         return options
 
     def driver(self):
@@ -173,15 +173,14 @@ class QQZone:
             try:
                 # WebDriverWait(driver, 2, 0.5).until(
                 # EC.presence_of_element_located((By.ID, r'aIcenter')))
-                _ = BeautifulSoup(driver.page_source, 'lxml').find_all(
-                    'a', id='aIcenter')[0]
+                _ = BeautifulSoup(driver.page_source, 'lxml').find_all('a', id='aIcenter')[0]
                 print('>> 登陆成功!')
                 break
-            except:
+            except Exception as e:
                 # SimpleMessagebox.create(
                     # title='自动登陆失败', message='请手动完成登录!', msg_type='warning')
-                pyautogui.alert(title='自动登陆失败', text='请手动完成登录后，点击确认!', button='确认')
-                queue_print('>> 等待手动完成登录中, 可能较久，稍等一会儿...')
+                pyautogui.alert(title='自动登陆失败', text='请手动完成登录后，等待几秒，点击确认!\n若重复出现，请刷新页面。', button='确认')
+                queue_print('>> 等待手动完成登录中, 可能较久，稍等一会儿...'+str(e))
                 time.sleep(5)
         driver.switch_to.default_content()
 
