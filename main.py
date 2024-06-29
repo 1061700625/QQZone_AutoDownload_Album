@@ -442,35 +442,43 @@ class QQZonePictures:
             index += 1
 
         # which_album = int(input("输入数字(如:1) ").strip()) - 1
-        temp_msg += '\n输入对应数字(如:1)'
+        temp_msg += '\n- 输入对应数字(如: 1). \n- 支持多个(如: 1,3,5). \n- 支持全部(如: 0)'
         try:
-            which_album = int(pyautogui.prompt(
-                text=temp_msg, title='选择待下载相册', default='1').strip()) - 1
+            album_index = pyautogui.prompt(text=temp_msg, title='选择待下载相册', default='1').strip()
+            if album_index == '': 
+                pyautogui.alert(title='温馨提示', text='请检查输入', button='明白')
+                return
+            album_index = album_index.replace('，', ',').replace(' ', '')
+            if album_index == '0': album_index = list(range(len(album_lists)))
+            else: album_index = [int(i)-1 for i in album_index.split(',')]
         except Exception as e:
+            print(e)
             pyautogui.alert(title='温馨提示', text='请检查输入', button='明白')
             return
-        list_id = album_lists[which_album]['id']
-        num = album_lists[which_album]['total']
-        queue_print('>> 获取照片中...')
-        start = 0
-        Photos_datas = None
-        current_num = 0
-        while current_num <= num:
-            Photos_data = self.Get_photos(list_id, 500, start=start)
-            if not Photos_data["data"]["photoList"]:
-                queue_print('>> 无更多项')
-                break
-            current_num += 500
-            start = current_num
-            queue_print('>> 本次获取到{}项，共{}项'.format(
-                len(Photos_data["data"]["photoList"]), num))
-            if not Photos_datas:
-                Photos_datas = Photos_data
-            elif Photos_data["data"]["photoList"]:
-                Photos_datas["data"]["photoList"].extend(
-                    Photos_data["data"]["photoList"])
-        queue_print('>> 下载照片中...')
-        self.Downloads(Photos_datas)
+
+        for which_album in album_index:
+            list_id = album_lists[which_album]['id']
+            num = album_lists[which_album]['total']
+            queue_print('>> 获取照片中...')
+            start = 0
+            Photos_datas = None
+            current_num = 0
+            while current_num <= num:
+                Photos_data = self.Get_photos(list_id, 500, start=start)
+                if not Photos_data["data"]["photoList"]:
+                    queue_print('>> 无更多项')
+                    break
+                current_num += 500
+                start = current_num
+                queue_print('>> 本次获取到{}项，共{}项'.format(
+                    len(Photos_data["data"]["photoList"]), num))
+                if not Photos_datas:
+                    Photos_datas = Photos_data
+                elif Photos_data["data"]["photoList"]:
+                    Photos_datas["data"]["photoList"].extend(
+                        Photos_data["data"]["photoList"])
+            queue_print('>> 下载照片中...')
+            self.Downloads(Photos_datas)
 
 from tkinter import END
 class MyWin(Win):
