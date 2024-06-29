@@ -24,6 +24,9 @@ import queue
 import pyautogui
 from bs4 import BeautifulSoup
 import lxml
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
+
 
 global_queue = Queue()
 
@@ -140,11 +143,14 @@ class QQZone:
 
     def driver(self):
         chrome_options = self.get_browser_options()
-        # 有头浏览器的写法
-        driver = uc.Chrome(driver_executable_path=self.driver_path,
-                           browser_executable_path=self.browser_path,
-                           suppress_welcome=False,
-                           options=chrome_options)
+        if not os.path.exists(self.driver_path) or not os.path.exists(self.browser_path):
+            driver = uc.Chrome(service=ChromeService(ChromeDriverManager().install()))
+        else:
+            # 有头浏览器的写法
+            driver = uc.Chrome(driver_executable_path=self.driver_path,
+                            browser_executable_path=self.browser_path,
+                            suppress_welcome=False,
+                            options=chrome_options)
         driver.get(self.url_login)
 
         if self.username and self.password:
