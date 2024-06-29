@@ -426,10 +426,13 @@ class QQZonePictures:
         queue_print(">> 你共有以下相册，请输入需要下载相册的序号 \r\n")
         temp_msg = '>> 你共有以下相册，请输入需要下载相册的序号 \r\n'
         try:
-            photos_lists = photos_lists["data"]['albumListModeSort']
+            album_lists = photos_lists["data"]['albumListModeSort']
         except:
-            photos_lists = photos_lists["data"]['albumListModeClass'][0]['albumList']
-        for photos_list in photos_lists:
+            album_lists = []
+            for item in photos_lists["data"]['albumListModeClass']:
+                album_lists += (item['albumList'] or [])
+            # photos_lists = photos_lists["data"]['albumListModeClass'][0]['albumList']
+        for photos_list in album_lists:
             name = photos_list['name']
             num = photos_list['total']
             allowAccess = '加密' if photos_list['allowAccess'] == 0 else '开放'
@@ -446,8 +449,8 @@ class QQZonePictures:
         except Exception as e:
             pyautogui.alert(title='温馨提示', text='请检查输入', button='明白')
             return
-        list_id = photos_lists[which_album]['id']
-        num = photos_lists[which_album]['total']
+        list_id = album_lists[which_album]['id']
+        num = album_lists[which_album]['total']
         queue_print('>> 获取照片中...')
         start = 0
         Photos_datas = None
