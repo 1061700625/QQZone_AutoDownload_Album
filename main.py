@@ -211,7 +211,6 @@ class QQZone:
         my_session.cookies.update(c)
         return my_session
 
-    # 生成g_tk
     def get_g_tk(self, driver):
         hashes = 5381
         for letter in driver.get_cookie('p_skey')['value']:
@@ -270,8 +269,9 @@ class QQZonePictures:
         return data
 
     def Mkdir_path(self, path):
-        if not os.path.exists(path):
-            os.mkdir(path)
+        # if not os.path.exists(path):
+        #     os.mkdir(path)
+        os.makedirs(path, exist_ok=True)
         return path
 
     def Get_photo_lists(self, gtk=None, hostUin=None, uin=None):
