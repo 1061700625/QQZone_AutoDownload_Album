@@ -1,7 +1,17 @@
+# -*- coding: utf-8 -*-
+"""
+QQ空间相册下载器
+支持 Windows/Linux/macOS 多平台运行
+自动检测 Chrome 浏览器路径和版本
+"""
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 from gui import Win, Simpledialog, SimpleMessagebox
 import time
-# from zone import *
 import os
+import platform
 from queue import Queue
 import math
 from re import U
@@ -26,6 +36,178 @@ from bs4 import BeautifulSoup
 import lxml
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
+from PIL import Image
+import piexif
+from datetime import datetime
+
+
+def is_wsl():
+    """检测当前是否运行在 WSL (Windows Subsystem for Linux) 环境中"""
+    return 'microsoft' in platform.uname().release.lower() or 'WSL' in platform.uname().release
+
+
+def get_chrome_version(browser_path):
+    """
+    获取 Chrome/Chromium 浏览器版本号
+    
+    Args:
+        browser_path: 浏览器可执行文件路径
+        
+    Returns:
+        str: 版本号字符串 (如 "146.0.7680.80") 或 None
+    """
+    if not browser_path or not os.path.exists(browser_path):
+        return None
+    try:
+        result = os.popen(f'"{browser_path}" --version 2>/dev/null').read().strip()
+        import re
+        match = re.search(r'(\d+)\.(\d+)\.(\d+)\.(\d+)', result)
+        if match:
+            return match.group(0)
+        match = re.search(r'(\d+)', result)
+        if match:
+            return match.group(1)
+    except:
+        pass
+    return None
+
+
+def get_chrome_paths():
+    """
+    根据操作系统自动检测 Chrome/Chromium 浏览器路径
+    
+    Returns:
+        tuple: (browser_path, driver_path) 浏览器路径和驱动路径
+    """
+    system = platform.system()
+    browser_path = None
+    driver_path = None
+    
+    if system == 'Windows':
+        windows_paths = [
+            r'C:\Program Files\Google\Chrome\Application\chrome.exe',
+            r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+            os.path.expandvars(r'%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe'),
+            r'Chrome/BitBrowser.exe',
+            r'Chrome/chrome.exe',
+        ]
+        for path in windows_paths:
+            if os.path.exists(path):
+                browser_path = path
+                break
+        driver_path = r'Chrome/chromedriver.exe'
+        if not os.path.exists(driver_path):
+            driver_path = None
+            
+    elif system == 'Linux':
+        if is_wsl():
+            wsl_chrome_paths = [
+                '/usr/bin/google-chrome',
+                '/usr/bin/google-chrome-stable',
+                '/usr/bin/chromium-browser',
+                '/usr/bin/chromium',
+            ]
+        else:
+            wsl_chrome_paths = [
+                '/usr/bin/google-chrome',
+                '/usr/bin/google-chrome-stable',
+                '/usr/bin/chromium-browser',
+                '/usr/bin/chromium',
+            ]
+        for path in wsl_chrome_paths:
+            if os.path.exists(path):
+                browser_path = path
+                break
+        driver_path = None
+        
+    elif system == 'Darwin':
+        mac_paths = [
+            '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+            '/Applications/Chromium.app/Contents/MacOS/Chromium',
+        ]
+        for path in mac_paths:
+            if os.path.exists(path):
+                browser_path = path
+                break
+        driver_path = None
+    
+    return browser_path, driver_path
+
+
+def write_exif_to_image(image_path, photo_data):
+    """
+    将 QQ 空间照片的 EXIF 信息写入图片文件
+    
+    Args:
+        image_path: 图片文件路径
+        photo_data: QQ 空间返回的照片数据字典
+    """
+    try:
+        if photo_data.get('is_video', False):
+            return
+
+        exif_data = photo_data.get('exif', {})
+        if not exif_data:
+            return
+
+        zeroth_ifd = {}
+        exif_ifd = {}
+
+        make = exif_data.get('make', '')
+        if make:
+            zeroth_ifd[piexif.ImageIFD.Make] = make
+
+        model = exif_data.get('model', '')
+        if model:
+            zeroth_ifd[piexif.ImageIFD.Model] = model
+
+        original_time = exif_data.get('originalTime', '')
+        if original_time:
+            exif_ifd[piexif.ExifIFD.DateTimeOriginal] = original_time
+            exif_ifd[piexif.ExifIFD.DateTimeDigitized] = original_time
+
+        exposure_time = exif_data.get('exposureTime', '')
+        if exposure_time:
+            try:
+                if '/' in exposure_time:
+                    num, den = exposure_time.split('/')
+                    exif_ifd[piexif.ExifIFD.ExposureTime] = (int(num), int(den))
+            except:
+                pass
+
+        iso = exif_data.get('iso', '')
+        if iso:
+            try:
+                exif_ifd[piexif.ExifIFD.ISOSpeedRatings] = int(iso)
+            except:
+                pass
+
+        focal_length = exif_data.get('focalLength', '')
+        if focal_length:
+            try:
+                if '/' in focal_length:
+                    num, den = focal_length.split('/')
+                    exif_ifd[piexif.ExifIFD.FocalLength] = (int(num), int(den))
+            except:
+                pass
+
+        flash = exif_data.get('flash', '')
+        if flash:
+            try:
+                exif_ifd[piexif.ExifIFD.Flash] = int(flash)
+            except:
+                pass
+
+        if zeroth_ifd or exif_ifd:
+            exif_dict = {"0th": zeroth_ifd, "Exif": exif_ifd}
+            try:
+                exif_bytes = piexif.dump(exif_dict)
+                piexif.insert(exif_bytes, image_path)
+            except Exception as e:
+                queue_print(f">> EXIF 写入失败: {e}")
+
+    except Exception as e:
+        queue_print(f">> 处理 EXIF 出错: {e}")
 
 
 global_queue = Queue()
@@ -101,9 +283,11 @@ class QQZone:
             'connection': 'keep-alive',
             'referer': 'https://qzone.qq.com/',
         }
-        # Chrome下载链接：http://xfxuezhang.cn/web/share/软件-电脑/Chrome.zip
-        self.browser_path = r'Chrome/BitBrowser.exe'
-        self.driver_path = r'Chrome/chromedriver.exe'
+        self.browser_path, self.driver_path = get_chrome_paths()
+        if self.browser_path:
+            queue_print(f'>> 检测到浏览器路径: {self.browser_path}')
+        else:
+            queue_print('>> 警告: 未检测到 Chrome 浏览器，将尝试自动下载')
 
     def get_browser_options(self):
         options = Options()
@@ -142,15 +326,37 @@ class QQZone:
         return options
 
     def driver(self):
+        """
+        初始化并返回 Chrome WebDriver 实例
+        自动检测浏览器版本并下载匹配的 ChromeDriver
+        """
         chrome_options = self.get_browser_options()
-        if not os.path.exists(self.driver_path) or not os.path.exists(self.browser_path):
-            driver = uc.Chrome(service=ChromeService(ChromeDriverManager().install()))
-        else:
-            # 有头浏览器的写法
+        if self.browser_path and os.path.exists(self.browser_path):
+            chrome_options.binary_location = self.browser_path
+        
+        if self.driver_path and os.path.exists(self.driver_path) and self.browser_path and os.path.exists(self.browser_path):
             driver = uc.Chrome(driver_executable_path=self.driver_path,
-                            browser_executable_path=self.browser_path,
                             suppress_welcome=False,
                             options=chrome_options)
+        else:
+            queue_print('>> 正在初始化浏览器...')
+            chrome_version = get_chrome_version(self.browser_path)
+            if chrome_version:
+                queue_print(f'>> 检测到 Chrome 版本: {chrome_version}')
+            try:
+                version_main = int(chrome_version.split('.')[0]) if chrome_version else None
+                driver = uc.Chrome(options=chrome_options, version_main=version_main)
+            except Exception as e:
+                queue_print(f'>> undetected_chromedriver 失败: {e}')
+                queue_print('>> 尝试使用标准 selenium...')
+                from selenium import webdriver
+                from selenium.webdriver.chrome.service import Service
+                from webdriver_manager.chrome import ChromeDriverManager
+                if chrome_version:
+                    service = Service(ChromeDriverManager(driver_version=chrome_version).install())
+                else:
+                    service = Service(ChromeDriverManager().install())
+                driver = webdriver.Chrome(service=service, options=chrome_options)
         driver.get(self.url_login)
 
         if self.username and self.password:
@@ -260,12 +466,23 @@ class QQZonePictures:
         }
 
     def Clean_data(self, string):
-        response = string.replace(' ', '')
-        response = response.replace('\t', '')
-        response = response.replace('\n', '')
-        response = response.replace('false', '"false"')
-        response = response.replace('true', '"true"')
-        data = json.loads(response[10:-2])
+        response = string.strip()
+        json_str = response[10:-2] if len(response) > 12 else response
+        try:
+            data = json.loads(json_str)
+        except json.JSONDecodeError as e:
+            queue_print(f'>> JSON 解析错误: {e}')
+            queue_print('>> 尝试使用 json5 解析...')
+            try:
+                data = json5.loads(json_str)
+            except Exception as e2:
+                queue_print(f'>> json5 解析失败: {e2}')
+                queue_print(f'>> 数据位置 {e.pos if hasattr(e, "pos") else "未知"}')
+                if hasattr(e, 'pos') and e.pos:
+                    start = max(0, e.pos - 50)
+                    end = min(len(json_str), e.pos + 50)
+                    queue_print(f'>> 错误位置附近数据: ...{json_str[start:end]}...')
+                raise
         return data
 
     def Mkdir_path(self, path):
@@ -359,10 +576,10 @@ class QQZonePictures:
                 exist_index += 1
             temp_pic_names.append(pic_name)
 
-            contents.append((pic_name, url))
+            contents.append((pic_name, url, photo))
 
         with open('./url.txt', 'w+') as f:
-            for pic_name, url in contents:
+            for pic_name, url, photo in contents:
                 f.write(pic_name + " " + url + '\n')
         queue_print(">> 图片信息写入url.txt完成")
 
@@ -381,7 +598,7 @@ class QQZonePictures:
                 if not item:
                     queue_print('>> [{}]没有更多内容，当前线程完成'.format(id))
                     break
-                pic_name, url = item
+                pic_name, url, photo = item
                 path = os.path.join(root, pic_name)
                 queue_print('>> [{}]当前下载：{} - {}'.format(id, path, url))
                 cnt_retry = 0
@@ -392,6 +609,7 @@ class QQZonePictures:
                         with open(path, 'wb+') as file:
                             file.write(read.content)
                         queue_print(f">> [{id}] {pic_name} 下载成功")
+                        write_exif_to_image(path, photo)
                         break
                     except:
                         cnt_retry += 1
@@ -463,22 +681,34 @@ class QQZonePictures:
             start = 0
             Photos_datas = None
             current_num = 0
-            while current_num <= num:
-                Photos_data = self.Get_photos(list_id, 500, start=start)
-                if not Photos_data["data"]["photoList"]:
-                    queue_print('>> 无更多项')
-                    break
-                current_num += 500
-                start = current_num
-                queue_print('>> 本次获取到{}项，共{}项'.format(
-                    len(Photos_data["data"]["photoList"]), num))
-                if not Photos_datas:
-                    Photos_datas = Photos_data
-                elif Photos_data["data"]["photoList"]:
-                    Photos_datas["data"]["photoList"].extend(
-                        Photos_data["data"]["photoList"])
+            page_size = 100
+            while current_num < num:
+                try:
+                    Photos_data = self.Get_photos(list_id, page_size, start=start)
+                    if not Photos_data.get("data") or not Photos_data["data"].get("photoList"):
+                        queue_print('>> 无更多项')
+                        break
+                    photo_list = Photos_data["data"]["photoList"]
+                    current_num += len(photo_list)
+                    start = current_num
+                    queue_print('>> 本次获取到{}项，共{}项'.format(len(photo_list), num))
+                    if not Photos_datas:
+                        Photos_datas = Photos_data
+                    elif photo_list:
+                        Photos_datas["data"]["photoList"].extend(photo_list)
+                except Exception as e:
+                    queue_print(f'>> 获取照片出错: {e}')
+                    queue_print('>> 尝试减少每页数量重试...')
+                    page_size = max(20, page_size // 2)
+                    if page_size < 20:
+                        queue_print('>> 重试失败，跳过此批次')
+                        start += 100
+                        current_num = start
             queue_print('>> 下载照片中...')
-            self.Downloads(Photos_datas)
+            if Photos_datas:
+                self.Downloads(Photos_datas)
+            else:
+                queue_print('>> 未获取到照片数据')
 
 from tkinter import END
 class MyWin(Win):

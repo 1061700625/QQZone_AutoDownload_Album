@@ -8,3 +8,5 @@ bs4
 lxml
 requests
 webdriver-manager
+Pillow
+piexif
